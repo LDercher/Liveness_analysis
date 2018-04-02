@@ -122,11 +122,11 @@ type Liveness = [(String, [String])]
 
 --need function to get succ of current block
 
-liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
-liveness (first,rest) [(m,[ns])] [(n,([uses],[defs]))] = ([(n,livin)],[(n,parseUseDef liveout)])
-                                                      where livin = [uses] ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip [defs] (parseUseDef liveout)))  --[uses[n]] ++ ([defs[n]] - ([uses[m]] ++ out[m] - def)
-                                                            liveout = concat (map (findUseDefs [(n,([uses],[defs]))]) (concat (map snd (successors (first,rest))))) --usedefs of successors
-                                                            blocks = ("^",first) : rest
+--liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
+--liveness (first,rest) [(m,[ns])] [(n,([uses],[defs]))] = ([(n,livin)],[(n,parseUseDef liveout)])
+--                                                      where livin = [uses] ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip [defs] (parseUseDef liveout)))  --[uses[n]] ++ ([defs[n]] - ([uses[m]] ++ out[m] - def)
+--                                                            liveout = concat (map (findUseDefs [(n,([uses],[defs]))]) (concat (map snd (successors (first,rest))))) --usedefs of successors
+--                                                            blocks = ("^",first) : rest
 
 
 
@@ -140,3 +140,22 @@ parseUseDef [(n,([uses],[defs]))] = [uses]
 
 findUseDefs :: UseDefs -> String -> UseDefs
 findUseDefs [(n,([uses],[defs]))] ss = [(ss,fromJust (lookup ss [(n,([uses],[defs]))]))]
+
+keys :: (String,[String]) -> (String,[])
+keys (s,_) = (s,[])
+
+liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
+liveness (first,rest) pred ud = map liveness' (map keys blocks) (map keys blocks) blocks ud
+                                            where blocks = ("^",first) : rest
+                                                  
+
+liveness' :: Liveness -> Liveness -> (String,Block) -> UseDefs -> (Liveness, Liveness)
+liveness' li lo (s,b) ud = if ((li == li') && (lo == lo'))
+                            then (li,lo)
+                            else liveness' li' lo' (s,b) ud
+                        where li' = snd (lookup s ud) ++ 
+                              lo' = []
+  
+  -- ((s,lil),(s,lol))
+                           --         where lil = []
+                           --               lol = []
