@@ -22,9 +22,9 @@ doFun (funName, (_, _, cfg@(_, blocks))) =
        mapM_ doBlock ("^" : map fst blocks)
     where preds = predecessors cfg
           uds   = useDefs cfg
-          (liveIns, liveOuts) = ("a","b")--liveness cfg preds uds
+          (liveIns, liveOuts) = liveness cfg preds uds
 
-          doBlock blockName = putStr (unlines ["--- " ++ blockName ++ " ---", blockPreds, blockUseDefs{--, blockLiveness--}])
+          doBlock blockName = putStr (unlines ["--- " ++ blockName ++ " ---", blockPreds, blockUseDefs, blockLiveness])
               where blockPreds = case lookup blockName preds of
                                    Nothing -> "    Something's wrong! No predecessors for " ++ blockName
                                    Just bs -> "    Predecessors: " ++ intercalate ", " bs
@@ -32,7 +32,6 @@ doFun (funName, (_, _, cfg@(_, blocks))) =
                                      Nothing           -> "    Something's wrong! No uses for " ++ blockName
                                      Just (used, defs) -> "    Used:" ++ intercalate ", " used ++
                                                           "\n    Defined: " ++  intercalate ", " defs
-                   {--blockLiveness = case (lookup blockName liveIns, lookup blockName liveOuts) of
+                    blockLiveness = case (lookup blockName liveIns, lookup blockName liveOuts) of
                                       (Just vs, Just ws) -> "    Live in: " ++ intercalate ", " vs ++ "\n    Live out: " ++ intercalate ", " ws
                                       _                  -> "    Something's wrong! No liveness for " ++ blockName
---}

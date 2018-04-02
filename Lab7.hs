@@ -121,13 +121,22 @@ type Liveness = [(String, [String])]
 -- in(pred[n]) goes to previous node live out
 
 --need function to get succ of current block
-filtList:: [a] -> [b] -> [c]
-filtList (a:as) (b:bs) = (map fst (filter (\ x-> (fst x) > (snd x)) (zip (a:as) (b:bs))))
 
 liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
-liveness (first,rest) [(m,[ns])] [(n,([uses],[defs]))] = ([(n,[livin])],liveout)
-                                                      where livin = [uses] ++ filter [defs] [liveout] -- find a new way to do this elem
-                                                            liveout = predecessors (first,rest)
+liveness (first,rest) [(m,[ns])] [(n,([uses],[defs]))] = ([(n,livin)],[(n,parseUseDef liveout)])
+                                                      where livin = [uses] ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip [defs] (parseUseDef liveout)))  --[uses[n]] ++ ([defs[n]] - ([uses[m]] ++ out[m] - def)
+                                                            liveout = concat (map (findUseDefs [(n,([uses],[defs]))]) (concat (map snd (successors (first,rest))))) --usedefs of successors
                                                             blocks = ("^",first) : rest
 
---write successor function
+
+
+-- successors ("name",["successors"])
+-- lookup successor in usedefs 
+-- given list of successors find usedefs
+-- liveout[n] += use[m] ++ (liveout[m] - def[m]) 
+-- livein[n] += use[n] ++ (liveout[n] - def[n]) 
+parseUseDef :: UseDefs -> [String]
+parseUseDef [(n,([uses],[defs]))] = [uses]
+
+findUseDefs :: UseDefs -> String -> UseDefs
+findUseDefs [(n,([uses],[defs]))] ss = [(ss,fromJust (lookup ss [(n,([uses],[defs]))]))]
