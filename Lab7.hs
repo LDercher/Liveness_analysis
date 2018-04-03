@@ -110,6 +110,7 @@ function, from Data.List, can help.
 -- This type aliases are simply to make the intended behavior of the `liveness`
 -- function more apparent from its type signature!
 type Predecessors = [(String, [String])] -- str has [strings that call it] (m, [n])
+type Successors = [(String, [String])] 
 type UseDefs = [(String, ([String], [String]))] -- str, ([uses],[defs])
 type Liveness = [(String, [String])]
 
@@ -141,21 +142,17 @@ parseUseDef [(n,([uses],[defs]))] = [uses]
 findUseDefs :: UseDefs -> String -> UseDefs
 findUseDefs [(n,([uses],[defs]))] ss = [(ss,fromJust (lookup ss [(n,([uses],[defs]))]))]
 
-keys :: (String,[String]) -> (String,[])
-keys (s,_) = (s,[])
+keys :: (String,a) -> [Liveness]
+keys (s,_) = [(s,[])]
 
 liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
-liveness (first,rest) pred ud = map liveness' (map keys blocks) (map keys blocks) blocks ud
+liveness (first,rest) pred ud = map liveness' (concatMap keys blocks) (concatMap keys blocks) (successors (first,rest)) ud blocks 
                                             where blocks = ("^",first) : rest
                                                   
 
-liveness' :: Liveness -> Liveness -> (String,Block) -> UseDefs -> (Liveness, Liveness)
-liveness' li lo (s,b) ud = if ((li == li') && (lo == lo'))
+liveness' :: Liveness -> Liveness -> Successors ->  UseDefs -> (String,Block) -> (Liveness, Liveness)
+liveness' li lo succ ud (s,b) = if ((li == li') && (lo == lo'))
                             then (li,lo)
-                            else liveness' li' lo' (s,b) ud
-                        where li' = snd (lookup s ud) ++ 
-                              lo' = []
-  
-  -- ((s,lil),(s,lol))
-                           --         where lil = []
-                           --               lol = []
+                            else liveness' li' lo' succ ud (s,b)
+                        where li' = fst (fromJust (lookup s ud)) ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip (fromJust (lookup s lo)) (snd (fromJust (lookup s ud)))))
+                              lo' = (fromJust (lookup s succ)) -- list of succ find each succ out list and concat them ["successors"] -> lo [(String,[String])]
