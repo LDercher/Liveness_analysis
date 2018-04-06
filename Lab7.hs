@@ -1,3 +1,12 @@
+{-- 
+
+  author: Luke Dercher
+  class: EECS 665
+  student id: l446d901
+
+--}
+
+
 module Lab7 where
 
 import LL.Language
@@ -121,38 +130,29 @@ type Liveness = [(String, [String])]
 --livein n = Usedef [(n,[uses],[_])] ++ (out[n] - def[n])
 -- in(pred[n]) goes to previous node live out
 
---need function to get succ of current block
 
---liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
---liveness (first,rest) [(m,[ns])] [(n,([uses],[defs]))] = ([(n,livin)],[(n,parseUseDef liveout)])
---                                                      where livin = [uses] ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip [defs] (parseUseDef liveout)))  --[uses[n]] ++ ([defs[n]] - ([uses[m]] ++ out[m] - def)
---                                                            liveout = concat (map (findUseDefs [(n,([uses],[defs]))]) (concat (map snd (successors (first,rest))))) --usedefs of successors
---                                                            blocks = ("^",first) : rest
-
-
-
--- successors ("name",["successors"])
--- lookup successor in usedefs 
--- given list of successors find usedefs
--- liveout[n] += use[m] ++ (liveout[m] - def[m]) 
--- livein[n] += use[n] ++ (liveout[n] - def[n]) 
 parseUseDef :: UseDefs -> [String]
 parseUseDef [(n,([uses],[defs]))] = [uses]
 
 findUseDefs :: UseDefs -> String -> UseDefs
 findUseDefs [(n,([uses],[defs]))] ss = [(ss,fromJust (lookup ss [(n,([uses],[defs]))]))]
 
-keys :: (String,a) -> [Liveness]
-keys (s,_) = [(s,[])]
+keys :: [(String,a)] -> [String]
+keys xs = map fst xs
 
 liveness :: Cfg -> Predecessors -> UseDefs -> (Liveness, Liveness)
-liveness (first,rest) pred ud = map liveness' (concatMap keys blocks) (concatMap keys blocks) (successors (first,rest)) ud blocks 
+liveness (first,rest) pred ud = liveness' empty empty (successors (first,rest)) ud
                                             where blocks = ("^",first) : rest
+                                                  empty = map (\(n, _) -> (n, [])) blocks
                                                   
 
-liveness' :: Liveness -> Liveness -> Successors ->  UseDefs -> (String,Block) -> (Liveness, Liveness)
-liveness' li lo succ ud (s,b) = if ((li == li') && (lo == lo'))
+liveness' :: Liveness -> Liveness -> Successors ->  UseDefs -> (Liveness, Liveness)
+liveness' li lo succ ud = if ((li == li') && (lo == lo'))
                             then (li,lo)
-                            else liveness' li' lo' succ ud (s,b)
-                        where li' = fst (fromJust (lookup s ud)) ++ map fst (filter (\ x-> (fst x) > (snd x)) (zip (fromJust (lookup s lo)) (snd (fromJust (lookup s ud)))))
-                              lo' = (fromJust (lookup s succ)) -- list of succ find each succ out list and concat them ["successors"] -> lo [(String,[String])]
+                            else liveness' li' lo' succ ud
+                        where li' = map liF li 
+                              liF (n, _) = (n,nub (uses ++ (fromJust (lookup n lo) \\ defs)))
+                                where (uses, defs) = fromJust (lookup n ud)
+                              lo' = map loF lo
+                              loF (n,_) = (n, nub( concatMap (\n' -> fromJust (lookup n' li)) (fromJust (lookup n succ)))) 
+ 
